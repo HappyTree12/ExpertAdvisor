@@ -1,0 +1,119 @@
+//+------------------------------------------------------------------+
+//|                        Trade Manager Panel                      |
+//|                         Basic Version                          |
+//|------------------------------------------------------------------|
+#property strict
+
+// Panel Coordinates and Dimensions
+#define PANEL_X 10
+#define PANEL_Y 50
+#define PANEL_WIDTH 200
+#define PANEL_HEIGHT 250
+
+// Global Variables
+input double LotSize = 1.0;
+input double StopLoss = 20.0;
+input double TakeProfit = 20.0;
+input double RiskPercent = 2.0;
+
+//+------------------------------------------------------------------+
+//| Create Trade Panel                                              |
+//+------------------------------------------------------------------+
+void OnInit()
+{
+    Comment("Trade Manager Panel Initialized");
+}
+
+//+------------------------------------------------------------------+
+//| OnTick Function - Handles Button Clicks                         |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    // Update Panel
+    DrawTradePanel();
+}
+
+//+------------------------------------------------------------------+
+//| Draw Trade Management Panel                                     |
+//+------------------------------------------------------------------+
+void DrawTradePanel()
+{
+    // Create Buttons
+    CreateButton("BUY", "BUY", PANEL_X, PANEL_Y, 60, 20, clrGreen);
+    CreateButton("SELL", "SELL", PANEL_X+70, PANEL_Y, 60, 20, clrRed);
+    CreateButton("CLOSE", "CLOSE", PANEL_X, PANEL_Y+30, 130, 20, clrGray);
+    CreateButton("BE", "BREAK EVEN", PANEL_X, PANEL_Y+60, 130, 20, clrBlue);
+}
+
+//+------------------------------------------------------------------+
+//| Create Button Function                                          |
+//+------------------------------------------------------------------+
+void CreateButton(string name, string text, int x, int y, int width, int height, color btnColor)
+{
+    if (!ObjectCreate(0, name, OBJ_BUTTON, 0, 0, 0)) return;
+    ObjectSetInteger(0, name, OBJPROP_XSIZE, width);
+    ObjectSetInteger(0, name, OBJPROP_YSIZE, height);
+    ObjectSetInteger(0, name, OBJPROP_CORNER, 0);
+    ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+    ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+    ObjectSetInteger(0, name, OBJPROP_COLOR, btnColor);
+    ObjectSetString(0, name, OBJPROP_TEXT, text);
+}
+
+//+------------------------------------------------------------------+
+//| Handle Button Clicks                                            |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+{
+    if (id == CHARTEVENT_OBJECT_CLICK)
+    {
+        if (sparam == "BUY") OrderSend(Symbol(), OP_BUY, LotSize, Ask, 3, 0, 0, "Buy Order", 0, 0, clrGreen);
+        if (sparam == "SELL") OrderSend(Symbol(), OP_SELL, LotSize, Bid, 3, 0, 0, "Sell Order", 0, 0, clrRed);
+        if (sparam == "CLOSE") CloseAllOrders();
+        if (sparam == "BE") MoveStopToBreakEven();
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Close All Orders                                                |
+//+------------------------------------------------------------------+
+void CloseAllOrders()
+{
+    for (int i = OrdersTotal() - 1; i >= 0; i--)
+    {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+            if (OrderType() == OP_BUY)
+                OrderClose(OrderTicket(), OrderLots(), Bid, 3, clrNONE);
+            if (OrderType() == OP_SELL)
+                OrderClose(OrderTicket(), OrderLots(), Ask, 3, clrNONE);
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Move Stop Loss to Break Even                                    |
+//+------------------------------------------------------------------+
+void MoveStopToBreakEven()
+{
+    for (int i = OrdersTotal() - 1; i >= 0; i--)
+    {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+            double entryPrice = OrderOpenPrice();
+            if (OrderType() == OP_BUY)
+                OrderModify(OrderTicket(), entryPrice, entryPrice, OrderTakeProfit(), 0, clrNONE);
+            else if (OrderType() == OP_SELL)
+                OrderModify(OrderTicket(), entryPrice, entryPrice, OrderTakeProfit(), 0, clrNONE);
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Deinitialization                                                |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    ObjectsDeleteAll();
+    Comment("");
+}
